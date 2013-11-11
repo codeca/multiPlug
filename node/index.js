@@ -7,8 +7,8 @@ var _totalConnections = 0
 
 // Get the local ip for this machine and save in an external host
 // TODO: debug in mac
-require("child_process").exec("ifconfig wlan0", function (error, stdout, stderr) {
-	var ips, localIpIndex
+require("child_process").exec("ifconfig en0", function (error, stdout, stderr) {
+	var ips, localIpIndex, options
 	if (error)
 		throw new Error("Error")
 
@@ -20,17 +20,19 @@ require("child_process").exec("ifconfig wlan0", function (error, stdout, stderr)
 
 	// Send to server
 	console.log("> Saving your local ip (" + ips[localIpIndex] + ") to external host (" + config.externalHost+") ...")
-	require("http").get(config.externalHost+"/set.php?key="+config.bundleIdentifier+"&ip="+ips[localIpIndex], function (res) {
+    options = require("url").parse(config.externalHost+"/set.php?key="+config.bundleIdentifier+"&ip="+ips[localIpIndex])
+    options.agent = false
+	require("http").get(options, function (res) {
 		if (res.statusCode != 200)
 			throw new Error("Error in the request. Check your Internal connection and your config.js fields")
 	}).once("close", function () {
-		console.log("> Saved, starting server ...")
+		console.log("> Saved, starting server...")
 		startServer()
 	})
 })
 
 // Constants
-var MSG_OUT_PLAYER_DISCONNECTED = 0
+var MSG_OUT_PLAYER_DISCONNECTED = -1
 var MSG_IN_SIMPLE_MATCH = 0
 var MSG_IN_FRIEND_MATCH_START = 1
 var MSG_IN_FRIEND_MATCH_JOIN = 2
@@ -68,6 +70,8 @@ function onmessage(type, data) {
 		}
 	} else if (this.state == Player.STATE_INGAME) {
 		// Broadcast the message
+        if (type < 0)
+            return
 		if (config.logBroadcasts)
 			console.log("> Broadcasting", type, data)
 		this.broadcast(type, data)
@@ -76,7 +80,7 @@ function onmessage(type, data) {
 
 // Treat a player disconnection
 function onclose() {
-	if (this.state == Player.STATE_INGAME)
+	if (this.game)
 		// Tell other players in the same room this one has disconnected
 		this.broadcast(MSG_OUT_PLAYER_DISCONNECTED, this.id)
 	else if (this.state == Player.STATE_MATCHING_SIMPLE)
@@ -95,7 +99,6 @@ function startServer() {
 	var server = require("net").createServer(function (conn) {
 		// Create the player
 		var p = new Player(conn)
-		p.matchType = MATCH_TYPE_UNKNOW
 		p.on("message", onmessage)
 		p.on("close", onclose)
 		

@@ -1,4 +1,5 @@
 "use strict"
+
 // All configurations in the server side
 module.exports = {
 	// External host to save your local ip

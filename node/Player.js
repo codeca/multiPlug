@@ -39,7 +39,7 @@ Player.STATE_DISCONNECTED = 4 // The player lost connection to the server
 // type is an int and data is anything that can be transformed into JSON
 Player.prototype.sendMessage = function (type, data) {
 	var buffer, len, lenBuffer
-	if (this.state != Player.STATE_DISCONNECTED) {
+	if (this.state != Player.STATE_DISCONNECTED && this._conn) {
 		data = data===undefined ? null : data
 		buffer = new Buffer(JSON.stringify([type, data]))
 		len = buffer.length
@@ -91,6 +91,8 @@ Player.prototype._getOnreadable = function () {
 
 // Try to process messages out of the read buffer
 Player.prototype._processMessages = function () {
+    var len, messageBuffer, message
+    
 	// Go on extracting all messages
 	while (true) {
 		if (this.state == Player.STATE_DISCONNECTED)

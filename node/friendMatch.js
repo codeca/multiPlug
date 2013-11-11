@@ -1,5 +1,5 @@
 "use strict"
-﻿// Module to handle friend matching
+// Module to handle friend matching
 
 var Game = require("./Game.js")
 var config = require("./config.js")
